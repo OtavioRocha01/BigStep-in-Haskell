@@ -13,8 +13,8 @@ data B = TRUE
       | Not B
       | And B B
       | Or  B B
-      | Leq E E    -- menor ou igual
-      | Igual E E  -- verifica se duas expressões aritméticas são iguais
+      | Leq E E
+      | Igual E E 
    deriving(Eq,Show)
 
 data C = While B C
@@ -22,11 +22,14 @@ data C = While B C
     | Seq C C
     | Atrib E E
     | Skip
-    | Twice C   il C B erdadeiro
-    | ExecN C E      | Assert B C o comando C
-    | Swap E E as
-    | DAtrrib E E E E e "e2" e duas expressões "e3" e "e4". Faz e1:=e3 e e2:=e4.
-   deriving(Eq,Show)                
+    | Twice C
+    | RepeatUntil C B
+    | ExecN C E
+    | Assert B C
+    | Swap E E
+    | DAtrrib E E E E
+    | DoWhile B C
+   deriving(Eq,Show)               
 
 
 -----------------------------------------------------
@@ -137,6 +140,15 @@ cbigStep (Swap (Var x) (Var y),s)
     | x == y        = (Skip,s)
     | otherwise     = (Skip,mudaVar (mudaVar s x (procuraVar s y)) y (procuraVar s x))
 cbigStep (DAtrrib (Var x) (Var y) e1 e2,s) = (Skip,mudaVar (mudaVar s x (ebigStep (e1,s))) y (ebigStep (e2,s)))
+cbigStep (Assert b c,s)
+    | bbigStep (b,s) == False   = (Skip,s)
+    | otherwise                 = cbigStep (c,s)
+cbigStep (While b c,s)
+    | bbigStep (b,s) == False   = (Skip,s)
+    | otherwise                 = let (c',s') = cbigStep (c,s) in cbigStep (While b c,s')
+cbigStep (DoWhile b c,s) = cbigStep (Seq c (While b c), s)
+
+    
 
 
 
@@ -189,8 +201,15 @@ teste2 = (Leq (Soma (Var "x") (Num 3))  (Mult (Num 2) (Num 3)))
 testec1 :: C
 testec1 = (Seq (Seq (Atrib (Var "z") (Var "x")) (Atrib (Var "x") (Var "y"))) (Atrib (Var "y") (Var "z")))
 
--- fatorial :: C
--- fatorial = (Seq (Atrib (Var "y") (Num 1))
---                 (While (Not (Igual (Var "x") (Num 1)))
---                        (Seq (Atrib (Var "y") (Mult (Var "y") (Var "x")))
---                             (Atrib (Var "x") (Sub (Var "x") (Num 1))))))
+fatorial :: C
+fatorial = (Seq (Atrib (Var "y") (Num 1))
+                (While (Not (Igual (Var "x") (Num 1)))
+                       (Seq (Atrib (Var "y") (Mult (Var "y") (Var "x")))
+                            (Atrib (Var "x") (Sub (Var "x") (Num 1))))))
+
+
+testec2 :: C
+testec2 = (Assert (Leq (Var "x") (Num 10)) (Atrib (Var "x") (Num 0)))
+
+testec3 :: C
+testec3 = (DoWhile (Leq (Var "x") (Num 10)) (Atrib (Var "x") (Soma (Var "x") (Num 1))))
